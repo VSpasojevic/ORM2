@@ -9,7 +9,7 @@
 // ================================================================
 
 
-/ Include libraries
+// Include libraries
 // We do not want the warnings about the old deprecated and unsecure CRT functions since these examples can be compiled under *nix as well
 #ifdef _MSC_VER
 	#define _CRT_SECURE_NO_WARNINGS
@@ -18,10 +18,9 @@
 #include <time.h>
 #endif
 
-#include "pcap.h"
-#include <stdio.h>
-#include <stdlib.h>
+#include <pcap.h>
 #include <pthread.h>
+#include "protocol_headers.h"
 
 #define	ETHERTYPE_ARP		0x0806		/* Address resolution */
 
