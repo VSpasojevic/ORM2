@@ -40,6 +40,9 @@ void packet_handler(unsigned char* user,  struct pcap_pkthdr* packet_header,  un
 pcap_t* device_handle_in, *device_handle_wifi;
 pcap_t* device_handle_in, *device_handle_eth;
 
+void fill_eth_h(ethernet_header *eh);
+void fill_ip_h(ip_header *ih);
+void fill_udp_h(udp_header *uh);
 
 
 void* sendData(void* arg);
@@ -56,6 +59,10 @@ int main()
 	pcap_if_t* device1;
 	pcap_if_t* device2;
 	char error_buffer [PCAP_ERRBUF_SIZE];
+	
+	ethernet_header eh;
+	ip_header ih;
+	udp_header uh;
 	
 	
 	/**************************************************************/
@@ -105,7 +112,13 @@ int main()
 		printf("\nNo interfaces found! Make sure WinPcap is installed.\n");
 		return -1;
 	}
-
+	
+	// fill ethernet header, ip header, udp header
+	fill_eth_h(&eh);
+	//fill_ip_h(&ih);
+	//fill_udp_h(&uh);
+	
+	printf("%d", eh.dest_address[0]);
 	/**************************************************************/
 	
 	// Open the output adapter (FOR ETH)
@@ -170,31 +183,15 @@ void* sendData(void* arg)
 	}
 
 	int i;
-	for(i = 0; i < 100; i++) {
+	for(i = 0; i < 10; i++) {
 		printf("\nSending on device: %s\n", device->name);
 	}
 
 	
 	// napravi udp pakete i salji
-	
-	// Supposing to be on Ethernet, set MAC destination address
-/*		test_data[0] = 0x38;
-		test_data[1] = 0xd5;
-		test_data[2] = 0x47;
-		test_data[3] = 0xde;
-		test_data[4] = 0xed;
-		test_data[5] = 0x05;
+
 		
-		
-	//  Set MAC source address 
-		test_data[6] = 0x38;
-		test_data[7] = 0xd5;
-		test_data[8] = 0x47;
-		test_data[9] = 0xde;
-		test_data[10] = 0xeb;
-		test_data[11] = 0xd2;*/
-		
-		for(i = 12; i < 100; i++) {
+		for(i = 0; i < 20; i++) {
 			test_data[i] = (unsigned char)i;
 		}
 
@@ -203,10 +200,92 @@ void* sendData(void* arg)
 			printf("Error sending the packet: %s\n", pcap_geterr(device_handle));
 		}
 	
+}
 
+
+void fill_eth_h(ethernet_header *eh)
+{
+/*	unsigned char dest_address[6];		// Destination address
+	unsigned char src_address[6];		// Source address
+	unsigned short type;				// Type of the next layer
+*/
+
+	eh->dest_address[0] = 0x2c;
+	eh->dest_address[1] = 0x4d;
+	eh->dest_address[2] = 0x54;
+	eh->dest_address[3] = 0x56;
+	eh->dest_address[4] = 0x99;
+	eh->dest_address[5] = 0x14;
+	
+	eh->src_address[0] = 0xb8;
+	eh->src_address[1] = 0x27;
+	eh->src_address[2] = 0xeb;
+	eh->src_address[3] = 0xd5;
+	eh->src_address[4] = 0xe1;
+	eh->src_address[5] = 0xcd;
+	
+	eh->type = 0x800;  // TYPE IP
 
 }
 
+void fill_ip_h(ip_header *ih)
+{
+/*	unsigned char header_length :4;	// Internet header length (4 bits)
+	unsigned char version :4;		// Version (4 bits)
+	unsigned char tos;				// Type of service 
+	unsigned short length;			// Total length 
+	unsigned short identification;	// Identification
+	unsigned short fragm_flags :3;  // Flags (3 bits) & Fragment offset (13 bits)
+    unsigned short fragm_offset :13;// Flags (3 bits) & Fragment offset (13 bits)
+	unsigned char ttl;				// Time to live
+	unsigned char next_protocol;	// Protocol of the next layer
+	unsigned short checksum;		// Header checksum
+	unsigned char src_addr[4];		// Source address
+	unsigned char dst_addr[4];		// Destination address
+	unsigned int options_padding;	// Option + Padding
+		// + variable part of the header
+*/
+
+	ih->header_length = ;
+	ih->version = ;
+	ih->tos = ;
+	ih->length = ;
+	ih->identification = ;
+	ih->fragm_flags = 0x02; //(don't fragment 0x02)
+	ih->fragm_offset = 0;
+	ih->ttl = 64;
+	ih->next_protocol = ;
+	ih->checksum = ;
+	ih->src_addr[0] = ;
+	ih->src_addr[0] = ;
+	ih->src_addr[0] = ;
+	ih->src_addr[0] = ;
+	
+	ih->dst_addr[0] = ;
+	ih->dst_addr[0] = ;
+	ih->dst_addr[0] = ;
+	ih->dst_addr[0] = ;
+	
+	ih->options_padding = ;
+
+//htons
+//ntos
+}
+
+void fill_udp_h(udp_header *uh)
+{
+/*	unsigned short src_port;		// Source port
+	unsigned short dest_port;		// Destination port
+	unsigned short datagram_length;	// Length of datagram including UDP header and data
+	unsigned short checksum;		// Header checksum
+*/
+
+	uh->src_port = 59138;
+	uh->dest_prot = 4000;
+	uh->datagram_length = 24;
+	uh->checksum = 0x1456;
+
+}
 
 
 /*
