@@ -122,6 +122,11 @@ int main()
 	eth_fill_ip_h(&ih_eth);
 	eth_fill_udp_h(&uh_eth);
 	
+	/*
+	printf("%d\n", eh_eth.dest_address[0]);
+	printf("%d\n", ih_eth.src_addr[0]);
+	*/
+	
 	
 	//fill wifi header , ip header, udp header
 	
@@ -130,10 +135,10 @@ int main()
 	wifi_fill_ip_h(&ih_wifi);	
 	wifi_fill_udp_h(&uh_wifi);	
 
-	/*
-	printf("%d\n", eh_eth.dest_address[0]);
-	printf("%d\n", ih_eth.src_addr[0]);
-	*/
+	
+	printf("%d\n", eh_wifi.dest_address[0]);
+	printf("%d\n", ih_wifi.src_addr[3]);
+	
 	
 	memcpy(test_data, &eh_eth, 14);
 	memcpy(test_data + 14, &ih_eth, 20);
@@ -299,22 +304,22 @@ void eth_fill_udp_h(udp_header *uh)
 
 }
 
-
+// --------------------------------------------------------------------------------WIFI FILL------------------------------
 void wifi_fill_eth_h(ethernet_header *eh)
 {
-	eh->dest_address[0] = 0x2c;			// Destination address
-	eh->dest_address[1] = 0x4d;
-	eh->dest_address[2] = 0x54;
-	eh->dest_address[3] = 0x56;
-	eh->dest_address[4] = 0x99;
-	eh->dest_address[5] = 0x14;
+	eh->dest_address[0] = 0x00;			// Destination address
+	eh->dest_address[1] = 0x0f;
+	eh->dest_address[2] = 0x60;
+	eh->dest_address[3] = 0x08;
+	eh->dest_address[4] = 0x28;
+	eh->dest_address[5] = 0x3b;
 	
-	eh->src_address[0] = 0xb8;			// Source address
-	eh->src_address[1] = 0x27;
-	eh->src_address[2] = 0xeb;
-	eh->src_address[3] = 0xd5;
-	eh->src_address[4] = 0xe1;
-	eh->src_address[5] = 0xcd;
+	eh->src_address[0] = 0x00;			// Source address
+	eh->src_address[1] = 0x0f;
+	eh->src_address[2] = 0x60;
+	eh->src_address[3] = 0x06;
+	eh->src_address[4] = 0x23;
+	eh->src_address[5] = 0x0a;
 	
 	eh->type = htons(0x0800);  // TYPE IP			// Type of the next layer
 

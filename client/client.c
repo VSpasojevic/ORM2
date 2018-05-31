@@ -31,7 +31,8 @@ typedef enum {false, true} bool;
 
 pthread_mutex_t mutex;
 
-unsigned char test_data[100];
+unsigned char test_data_eth[1000];
+unsigned char test_data_wifi[1000];
 
 #define	ETHERTYPE_ARP		0x0806		/* Address resolution */
 
@@ -92,7 +93,7 @@ int main()
 		if (strcmp(device->name, "eth0") == 0) {
 
 			device1 = device;
-			printf("\nTT11 %s\n", device1->name);
+			printf("\nDEV NAME: %s\n", device1->name);
 		}
 		if (strcmp(device->name, "wlan0") == 0 || strcmp(device->name, "wlan1") == 0) {
 			
@@ -128,9 +129,7 @@ int main()
 	*/
 	
 	
-	//fill wifi header , ip header, udp header
-	
-	
+	//fill wifi header , ip header, udp header	
 	wifi_fill_eth_h(&eh_wifi);	
 	wifi_fill_ip_h(&ih_wifi);	
 	wifi_fill_udp_h(&uh_wifi);	
@@ -140,29 +139,18 @@ int main()
 	printf("%d\n", ih_wifi.src_addr[3]);
 	
 	
-	memcpy(test_data, &eh_eth, 14);
-	memcpy(test_data + 14, &ih_eth, 20);
-	memcpy(test_data + 34, &uh_eth, 8);
+	memcpy(test_data_eth, &eh_eth, 14);
+	memcpy(test_data_eth + 14, &ih_eth, 20);
+	memcpy(test_data_eth + 34, &uh_eth, 8);
+	
+	memcpy(test_data_wifi, &eh_wifi, 14);
+	memcpy(test_data_wifi + 14, &ih_wifi, 20);
+	memcpy(test_data_wifi + 34, &uh_wifi, 8);
 	
 	// "This is my data"
-	test_data[43] = 'T';
-	test_data[44] = 'h';
-	test_data[45] = 'i';
-	test_data[46] = 's';
-	test_data[47] = ' ';
-	test_data[48] = 'i';
-	test_data[49] = 's';
-	test_data[50] = ' ';
-	test_data[51] = 'm';
-	test_data[52] = 'y';
-	test_data[53] = ' ';
-	test_data[54] = 'd';
-	test_data[55] = 'a';
-	test_data[56] = 't';
-	test_data[57] = 'a';
-	test_data[58] = '\0';
 	
-	//strcpy(test_data+43, "This is my data\0");
+	strcpy(test_data_eth+43, "This is my data\0");
+	strcpy(test_data_wifi+43, "This is my data\0");
 	
 	/**************************************************************/
 	
@@ -207,40 +195,45 @@ int main()
 void* sendData(void* arg)
 {
 
-pthread_mutex_lock(&mutex);
-	pcap_if_t* device = (pcap_if_t*) arg;	
-	pcap_t *device_handle;
-	char error_buffer[PCAP_ERRBUF_SIZE];
-	unsigned char packet[100];
+	pthread_mutex_lock(&mutex);
 
-	printf("\nSending on device: %s\n", device->name);	
-	
-	// if device is alive send data over it , if not sleep
-	// close the device?
-	if ((device_handle = pcap_open_live( device->name, // name of the device
-								100, // portion of the packet
-								1, //promiscuous mode
-								2000, // read timeout
-								error_buffer // error message
-	   )) == NULL) 
-	{
-		printf("\nUnable to open the adapter. %s is not supported by LibPcap\n",
-			  device->name);
-		sleep(SLEEP_TIME);
-	}
+		pcap_if_t* device = (pcap_if_t*) arg;	
+		pcap_t *device_handle;
+		char error_buffer[PCAP_ERRBUF_SIZE];
 
-	int i;
-	for(i = 0; i < 10; i++) {
-		printf("\nSending on device: %s\n", device->name);
-	}
-
-
-
-		if (pcap_sendpacket(device_handle, test_data, 60) != 0) {
-		
-			printf("Error sending the packet: %s\n", pcap_geterr(device_handle));
+		// if device is alive send data over it , if not sleep
+		// close the device?
+		if ((device_handle = pcap_open_live( device->name, // name of the device
+									100, // portion of the packet
+									1, //promiscuous mode
+									2000, // read timeout
+									error_buffer // error message
+		   )) == NULL) 
+		{
+			printf("\nUnable to open the adapter. %s is not supported by LibPcap\n",
+				  device->name);
+			sleep(SLEEP_TIME);
+			pthread_mutex_unlock(&mutex);
 		}
-pthread_mutex_unlock(&mutex);
+		
+
+		if (strcmp(device->name, "wlan0") == 0 || strcmp(device->name, "wlan1") == 0) {
+			printf("\nSending on device: %s\n", device->name);
+			if (pcap_sendpacket(device_handle, test_data_wifi, 60) != 0) {
+	
+				printf("Error sending the packet: %s\n", pcap_geterr(device_handle));
+			}
+		}
+		
+		if (strcmp(device->name, "eth0") == 0) {
+			printf("\nSending on device: %s\n", device->name);
+			if (pcap_sendpacket(device_handle, test_data_eth, 60) != 0) {
+				printf("Error sending the packet: %s\n", pcap_geterr(device_handle));
+			}
+			
+		}
+	pthread_mutex_unlock(&mutex);
+
 }
 
 
@@ -278,6 +271,7 @@ void eth_fill_ip_h(ip_header *ih)
 	ih->ttl = 64;										// Time to live
 	ih->next_protocol = 0x11; 	// UDP					// Protocol of the next layer
 	ih->checksum = htons(0xfa85);						// Header checksum
+
 	ih->src_addr[0] = 10;								// Source address
 	ih->src_addr[1] = 81;
 	ih->src_addr[2] = 31;
@@ -299,7 +293,7 @@ void eth_fill_udp_h(udp_header *uh)
 
 	uh->src_port = 60052;			// Source port
 	uh->dest_port = 4000;			// Destination port
-	uh->datagram_length = 24;		// Length of datagram including UDP header and data
+	uh->datagram_length = 6144;		// Length of datagram including UDP header and data
 	uh->checksum = 0x1456;			// Header checksum
 
 }
@@ -337,6 +331,7 @@ void wifi_fill_ip_h(ip_header *ih)
 	ih->ttl = 64;										// Time to live
 	ih->next_protocol = 0x11; 	// UDP					// Protocol of the next layer
 	ih->checksum = htons(0xfa85);						// Header checksum
+
 	ih->src_addr[0] = 10;								// Source address
 	ih->src_addr[1] = 42;
 	ih->src_addr[2] = 0;
@@ -352,24 +347,13 @@ void wifi_fill_ip_h(ip_header *ih)
 }
 void wifi_fill_udp_h(udp_header *uh)
 {
-	uh->src_port = 60053;			// Source port
-	uh->dest_port = 4001;			// Destination port
-	uh->datagram_length = 24;		// Length of datagram including UDP header and data
+	uh->src_port = 60052;			// Source port
+	uh->dest_port = 4000;			// Destination port
+	uh->datagram_length = 6144;		// Length of datagram including UDP header and data
 	uh->checksum = 0x1456;			// Header checksum
 
 }
 
-
-
-
-
-
-/*
-pthread_mutex_lock(&mutex);
-
-pthread_mutex_unlock(&mutex);
-
-*/
 
 
 
