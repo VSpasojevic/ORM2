@@ -40,9 +40,13 @@ void packet_handler(unsigned char* user,  struct pcap_pkthdr* packet_header,  un
 pcap_t* device_handle_in, *device_handle_wifi;
 pcap_t* device_handle_in, *device_handle_eth;
 
-void fill_eth_h(ethernet_header *eh);
-void fill_ip_h(ip_header *ih);
-void fill_udp_h(udp_header *uh);
+void eth_fill_eth_h(ethernet_header *eh);
+void eth_fill_ip_h(ip_header *ih);
+void eth_fill_udp_h(udp_header *uh);
+
+void wifi_fill_eth_h(ethernet_header *eh);
+void wifi_fill_ip_h(ip_header *ih);
+void wifi_fill_udp_h(udp_header *uh);
 
 
 void* sendData(void* arg);
@@ -60,9 +64,9 @@ int main()
 	pcap_if_t* device2;
 	char error_buffer [PCAP_ERRBUF_SIZE];
 	
-	ethernet_header eh;
-	ip_header ih;
-	udp_header uh;
+	ethernet_header eh_eth, eh_wifi;
+	ip_header ih_eth, ih_wifi;
+	udp_header uh_eth, uh_wifi ;
 	
 	
 	/**************************************************************/
@@ -114,11 +118,47 @@ int main()
 	}
 	
 	// fill ethernet header, ip header, udp header
-	fill_eth_h(&eh);
-	//fill_ip_h(&ih);
-	//fill_udp_h(&uh);
+	eth_fill_eth_h(&eh_eth);
+	eth_fill_ip_h(&ih_eth);
+	eth_fill_udp_h(&uh_eth);
 	
-	printf("%d", eh.dest_address[0]);
+	
+	//fill wifi header , ip header, udp header
+	
+/*	
+	wifi_fill_eth_h(&eh_wifi);	
+	wifi_fill_ih_h(&ih_wifi);	
+	wifi_fill_uh_h(&uh_wifi);	
+*/	
+	/*
+	printf("%d\n", eh_eth.dest_address[0]);
+	printf("%d\n", ih_eth.src_addr[0]);
+	*/
+	
+	memcpy(test_data, &eh_eth, 14);
+	memcpy(test_data + 14, &ih_eth, 20);
+	memcpy(test_data + 34, &uh_eth, 8);
+	
+	// "This is my data"
+	test_data[43] = 'T';
+	test_data[44] = 'h';
+	test_data[45] = 'i';
+	test_data[46] = 's';
+	test_data[47] = ' ';
+	test_data[48] = 'i';
+	test_data[49] = 's';
+	test_data[50] = ' ';
+	test_data[51] = 'm';
+	test_data[52] = 'y';
+	test_data[53] = ' ';
+	test_data[54] = 'd';
+	test_data[55] = 'a';
+	test_data[56] = 't';
+	test_data[57] = 'a';
+	test_data[58] = '\0';
+	
+	//strcpy(test_data+43, "This is my data\0");
+	
 	/**************************************************************/
 	
 	// Open the output adapter (FOR ETH)
@@ -187,15 +227,9 @@ void* sendData(void* arg)
 		printf("\nSending on device: %s\n", device->name);
 	}
 
-	
-	// napravi udp pakete i salji
 
-		
-		for(i = 0; i < 20; i++) {
-			test_data[i] = (unsigned char)i;
-		}
 
-		if (pcap_sendpacket(device_handle, test_data, 100) != 0) {
+		if (pcap_sendpacket(device_handle, test_data, 60) != 0) {
 		
 			printf("Error sending the packet: %s\n", pcap_geterr(device_handle));
 		}
@@ -203,89 +237,71 @@ void* sendData(void* arg)
 }
 
 
-void fill_eth_h(ethernet_header *eh)
+void eth_fill_eth_h(ethernet_header *eh)
 {
-/*	unsigned char dest_address[6];		// Destination address
-	unsigned char src_address[6];		// Source address
-	unsigned short type;				// Type of the next layer
-*/
 
-	eh->dest_address[0] = 0x2c;
+	eh->dest_address[0] = 0x2c;			// Destination address
 	eh->dest_address[1] = 0x4d;
 	eh->dest_address[2] = 0x54;
 	eh->dest_address[3] = 0x56;
 	eh->dest_address[4] = 0x99;
 	eh->dest_address[5] = 0x14;
 	
-	eh->src_address[0] = 0xb8;
+	eh->src_address[0] = 0xb8;			// Source address
 	eh->src_address[1] = 0x27;
 	eh->src_address[2] = 0xeb;
 	eh->src_address[3] = 0xd5;
 	eh->src_address[4] = 0xe1;
 	eh->src_address[5] = 0xcd;
 	
-	eh->type = 0x800;  // TYPE IP
+	eh->type = htons(0x0800);  // TYPE IP			// Type of the next layer
 
 }
 
-void fill_ip_h(ip_header *ih)
+void eth_fill_ip_h(ip_header *ih)
 {
-/*	unsigned char header_length :4;	// Internet header length (4 bits)
-	unsigned char version :4;		// Version (4 bits)
-	unsigned char tos;				// Type of service 
-	unsigned short length;			// Total length 
-	unsigned short identification;	// Identification
-	unsigned short fragm_flags :3;  // Flags (3 bits) & Fragment offset (13 bits)
-    unsigned short fragm_offset :13;// Flags (3 bits) & Fragment offset (13 bits)
-	unsigned char ttl;				// Time to live
-	unsigned char next_protocol;	// Protocol of the next layer
-	unsigned short checksum;		// Header checksum
-	unsigned char src_addr[4];		// Source address
-	unsigned char dst_addr[4];		// Destination address
-	unsigned int options_padding;	// Option + Padding
-		// + variable part of the header
-*/
 
-	ih->header_length = ;
-	ih->version = ;
-	ih->tos = ;
-	ih->length = ;
-	ih->identification = ;
-	ih->fragm_flags = 0x02; //(don't fragment 0x02)
-	ih->fragm_offset = 0;
-	ih->ttl = 64;
-	ih->next_protocol = ;
-	ih->checksum = ;
-	ih->src_addr[0] = ;
-	ih->src_addr[0] = ;
-	ih->src_addr[0] = ;
-	ih->src_addr[0] = ;
+	ih->header_length = 5;	// 20 mozda					// Internet header length (4 bits)
+	ih->version = 4;									// Version (4 bits)
+	ih->tos = 0x00;										// Type of service // ECN
+	ih->length = htons(44);	// this is my data packet	// Total length 
+	ih->identification = htons(0xed37);					// Identification
+	ih->fragm_flags = htons(0x02); 						// Flags (3 bits) & Fragment offset (13 bits)	
+	ih->fragm_offset = htons(0);						// Flags (3 bits) & Fragment offset (13 bits)
+	ih->ttl = 64;										// Time to live
+	ih->next_protocol = 0x11; 	// UDP					// Protocol of the next layer
+	ih->checksum = htons(0xfa85);						// Header checksum
+	ih->src_addr[0] = 10;								// Source address
+	ih->src_addr[1] = 81;
+	ih->src_addr[2] = 31;
+	ih->src_addr[3] = 41;
 	
-	ih->dst_addr[0] = ;
-	ih->dst_addr[0] = ;
-	ih->dst_addr[0] = ;
-	ih->dst_addr[0] = ;
+	ih->dst_addr[0] = 10;								// Destination address
+	ih->dst_addr[1] = 81;
+	ih->dst_addr[2] = 31;
+	ih->dst_addr[3] = 57;
 	
-	ih->options_padding = ;
+//  ih->options_padding = ;									// Option + Padding
 
 //htons
 //ntos
 }
 
-void fill_udp_h(udp_header *uh)
+void eth_fill_udp_h(udp_header *uh)
 {
-/*	unsigned short src_port;		// Source port
-	unsigned short dest_port;		// Destination port
-	unsigned short datagram_length;	// Length of datagram including UDP header and data
-	unsigned short checksum;		// Header checksum
-*/
 
-	uh->src_port = 59138;
-	uh->dest_prot = 4000;
-	uh->datagram_length = 24;
-	uh->checksum = 0x1456;
+	uh->src_port = 60052;			// Source port
+	uh->dest_port = 4000;			// Destination port
+	uh->datagram_length = 24;		// Length of datagram including UDP header and data
+	uh->checksum = 0x1456;			// Header checksum
 
 }
+
+
+
+
+
+
 
 
 /*
