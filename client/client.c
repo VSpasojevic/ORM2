@@ -106,8 +106,8 @@ int main()
 		return -1;
 	}
 
-	//printf("\nSending on: %s, %s\n", device1->name, device2->name);
-	printf("\nSending on: %s\n", device1->name);
+	printf("\nSending on: %s, %s\n", device1->name, device2->name);
+	//printf("\nSending on: %s\n", device1->name);
 
 
 	// Check if list is empty
@@ -122,18 +122,23 @@ int main()
 	eth_fill_ip_h(&ih_eth);
 	eth_fill_udp_h(&uh_eth);
 	
-	
-	//fill wifi header , ip header, udp header
-	
-/*	
-	wifi_fill_eth_h(&eh_wifi);	
-	wifi_fill_ih_h(&ih_wifi);	
-	wifi_fill_uh_h(&uh_wifi);	
-*/	
 	/*
 	printf("%d\n", eh_eth.dest_address[0]);
 	printf("%d\n", ih_eth.src_addr[0]);
 	*/
+	
+	
+	//fill wifi header , ip header, udp header
+	
+	
+	wifi_fill_eth_h(&eh_wifi);	
+	wifi_fill_ip_h(&ih_wifi);	
+	wifi_fill_udp_h(&uh_wifi);	
+
+	
+	printf("%d\n", eh_wifi.dest_address[0]);
+	printf("%d\n", ih_wifi.src_addr[3]);
+	
 	
 	memcpy(test_data, &eh_eth, 14);
 	memcpy(test_data + 14, &ih_eth, 20);
@@ -169,26 +174,26 @@ int main()
 	}
 
 	// Open the output adapter (FOR WIFI)
-//	if ((device_handle_wifi = pcap_open_live(device2->name, 100, 1, 2000, error_buffer)) == NULL)
-//	{
-//		printf("\n Unable to open adapter %s.\n", device2->name);
-//		return -1;
-//	}
+	if ((device_handle_wifi = pcap_open_live(device2->name, 100, 1, 2000, error_buffer)) == NULL)
+	{
+		printf("\n Unable to open adapter %s.\n", device2->name);
+		return -1;
+	}
 
 	// creating threads and sending data
 	pthread_t eth_thr;
-//	pthread_t wifi_thr;
+	pthread_t wifi_thr;
 	
 	if (pthread_create(&eth_thr, NULL, sendData, (void*)device1) != 0) {
 		printf("Error creating thread eth");
 	}
-//	if (pthread_create(&wifi_thr, NULL, sendData, (void*)device2) != 0) {
-//		printf("Error creating thread wifi");
-//	}
+	if (pthread_create(&wifi_thr, NULL, sendData, (void*)device2) != 0) {
+		printf("Error creating thread wifi");
+	}
 
 
 	pthread_join(eth_thr, NULL);
-//	pthread_join(wifi_thr, NULL);
+	pthread_join(wifi_thr, NULL);
 
 
 	// !!! IMPORTANT: remember to close the output adapter,
@@ -201,6 +206,8 @@ int main()
 
 void* sendData(void* arg)
 {
+
+pthread_mutex_lock(&mutex);
 	pcap_if_t* device = (pcap_if_t*) arg;	
 	pcap_t *device_handle;
 	char error_buffer[PCAP_ERRBUF_SIZE];
@@ -233,7 +240,7 @@ void* sendData(void* arg)
 		
 			printf("Error sending the packet: %s\n", pcap_geterr(device_handle));
 		}
-	
+pthread_mutex_unlock(&mutex);
 }
 
 
@@ -297,7 +304,60 @@ void eth_fill_udp_h(udp_header *uh)
 
 }
 
+// --------------------------------------------------------------------------------WIFI FILL------------------------------
+void wifi_fill_eth_h(ethernet_header *eh)
+{
+	eh->dest_address[0] = 0x00;			// Destination address
+	eh->dest_address[1] = 0x0f;
+	eh->dest_address[2] = 0x60;
+	eh->dest_address[3] = 0x08;
+	eh->dest_address[4] = 0x28;
+	eh->dest_address[5] = 0x3b;
+	
+	eh->src_address[0] = 0x00;			// Source address
+	eh->src_address[1] = 0x0f;
+	eh->src_address[2] = 0x60;
+	eh->src_address[3] = 0x06;
+	eh->src_address[4] = 0x23;
+	eh->src_address[5] = 0x0a;
+	
+	eh->type = htons(0x0800);  // TYPE IP			// Type of the next layer
 
+
+}
+void wifi_fill_ip_h(ip_header *ih)
+{
+	ih->header_length = 5;	// 20 mozda					// Internet header length (4 bits)
+	ih->version = 4;									// Version (4 bits)
+	ih->tos = 0x00;										// Type of service // ECN
+	ih->length = htons(44);	// this is my data packet	// Total length 
+	ih->identification = htons(0xed37);					// Identification
+	ih->fragm_flags = htons(0x02); 						// Flags (3 bits) & Fragment offset (13 bits)	
+	ih->fragm_offset = htons(0);						// Flags (3 bits) & Fragment offset (13 bits)
+	ih->ttl = 64;										// Time to live
+	ih->next_protocol = 0x11; 	// UDP					// Protocol of the next layer
+	ih->checksum = htons(0xfa85);						// Header checksum
+	ih->src_addr[0] = 10;								// Source address
+	ih->src_addr[1] = 42;
+	ih->src_addr[2] = 0;
+	ih->src_addr[3] = 70;
+	
+	ih->dst_addr[0] = 10;								// Destination address
+	ih->dst_addr[1] = 42;
+	ih->dst_addr[2] = 0;
+	ih->dst_addr[3] = 1;
+	
+//  ih->options_padding = ;									// Option + Padding
+
+}
+void wifi_fill_udp_h(udp_header *uh)
+{
+	uh->src_port = 60053;			// Source port
+	uh->dest_port = 4001;			// Destination port
+	uh->datagram_length = 24;		// Length of datagram including UDP header and data
+	uh->checksum = 0x1456;			// Header checksum
+
+}
 
 
 
